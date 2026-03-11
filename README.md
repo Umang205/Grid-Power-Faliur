@@ -52,11 +52,3 @@ pip install -r requirements.txt
 ## Contributing
 
 Feel free to submit issues and enhancement requests!
-
-## License
-
-[Add your chosen license]
-
-## Contact
-
-[Add your contact information]
