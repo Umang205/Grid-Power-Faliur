@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grid Analysis Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        /* Root variables for consistent scaling */
+        :root {
+            --spacing-unit: clamp(0.5rem, 1vw, 1rem);
+            --container-padding: clamp(1rem, 3vw, 3rem);
+            --heading-size: clamp(1.5rem, 4vw, 3rem);
+            --text-size: clamp(0.875rem, 2vw, 1rem);
+            --card-padding: clamp(1rem, 2vw, 2rem);
+        }
+
+        /* Base responsive styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #1a1a2e;
+            color: #fff;
+            font-family: 'Roboto', sans-serif;
+            position: relative;
+            overflow-x: hidden;
+            font-size: var(--text-size);
+            line-height: 1.5;
+        }
+
+        /* Power Grid Animation Background */
+        .grid-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(90deg, rgba(26,26,46,.97) 21px, transparent 1%) center,
+                linear-gradient(rgba(26,26,46,.97) 21px, transparent 1%) center,
+                rgba(0, 147, 233, 0.2);
+            background-size: 22px 22px;
+            animation: gridMove 30s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { background-position: 0 0; }
+            100% { background-position: 44px 44px; }
+        }
+
+        /* Power Line Animation */
+        .power-line {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            width: 2px;
+            height: 100%;
+            background: rgba(0, 147, 233, 0.3);
+            transform: translateX(-50%);
+        }
+
+        .power-pulse {
+            position: absolute;
+            width: 100%;
+            height: 20px;
+            background: #0093E9;
+            animation: pulsate 2s linear infinite;
+        }
+
+        @keyframes pulsate {
+            0% { top: -20px; opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+
+        .container {
+            position: relative;
+            width: min(100% - 2rem, 1200px);
+            margin-inline: auto;
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: var(--container-padding);
+            border: 1px solid rgba(0, 147, 233, 0.3);
+            box-shadow: 0 0 30px rgba(0, 147, 233, 0.2);
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .home-btn {
+            display: inline-block;
+            margin-bottom: 2rem;
+            color: #0093E9;
+            text-decoration: none;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .home-btn:hover {
+            color: #fff;
+            text-shadow: 0 0 10px rgba(0, 147, 233, 0.7);
+        }
+
+        .animated-heading {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .animated-heading h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: var(--heading-size);
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .heading-icon {
+            font-size: 1.2em;
+        }
+
+        .heading-text {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .heading-text span {
+            display: inline-block;
+            animation: letterPop 0.5s ease both;
+        }
+
+        @keyframes letterPop {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .heading-underline {
+            height: 3px;
+            width: 100px;
+            background: linear-gradient(90deg, #0093E9, transparent);
+            margin: 0.5rem auto 0;
+            animation: underlineGrow 1s ease-out forwards;
+        }
+
+        @keyframes underlineGrow {
+            0% { width: 0; opacity: 0; }
+            100% { width: 100px; opacity: 1; }
+        }
+
+        /* Form Styles */
+        #predictionForm {
+            margin-bottom: 2rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .input-group label {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 500;
+            color: #0093E9;
+            font-size: 0.9em;
+        }
+
+        .input-group input {
+            background: rgba(0, 147, 233, 0.1);
+            border: 1px solid rgba(0, 147, 233, 0.3);
+            border-radius: 5px;
+            padding: 0.75rem 1rem;
+            color: #fff;
+            font-family: 'Roboto', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        /* Calendar icon color */
+        .input-group input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #0093E9;
+            box-shadow: 0 0 0 2px rgba(0, 147, 233, 0.2);
+        }
+
+        .input-group input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        button[type="submit"] {
+            background: linear-gradient(135deg, #0093E9, #0066CC);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 0.75rem 2rem;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 500;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            max-width: 300px;
+            display: block;
+            margin: 0 auto;
+        }
+
+        button[type="submit"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 147, 233, 0.4);
+        }
+
+        button[type="submit"]:active {
+            transform: translateY(0);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            font-family: 'Orbitron', sans-serif;
+            color: #0093E9;
+            display: none;
+        }
+
+        /* Results Styles */
+        #result {
+            margin-top: 2rem;
+        }
+
+        .prediction-card {
+            background: rgba(26, 26, 46, 0.8);
+            border-radius: 10px;
+            border: 1px solid rgba(0, 147, 233, 0.3);
+            box-shadow: 0 5px 15px rgba(0, 147, 233, 0.1);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .prediction-header {
+            background: linear-gradient(45deg, #0093E9, #0066CC);
+            color: white;
+            padding: 1rem;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 500;
+            font-size: 1.2em;
+        }
+
+        .prediction-content {
+            padding: 1.5rem;
+        }
+
+        .failure-status {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2em;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .failure-yes {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #ef4444;
+        }
+
+        .failure-no {
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.5);
+            color: #22c55e;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .result-item {
+            background: rgba(0, 147, 233, 0.1);
+            border: 1px solid rgba(0, 147, 233, 0.2);
+            border-radius: 5px;
+            padding: 1rem;
+        }
+
+        .result-item strong {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #0093E9;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 500;
+        }
+
+        .confidence-bar {
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .confidence-level {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 1s ease;
+        }
+
+        /* Chart Container Styles */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 20px 0;
+            background: rgba(26, 26, 46, 0.7);
+            border-radius: 10px;
+            border: 1px solid rgba(0, 147, 233, 0.3);
+            padding: 10px;
+            overflow: hidden;
+        }
+
+        #riskChart {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+        }
+
+        .chart-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .chart-axis {
+            stroke: rgba(255, 255, 255, 0.3);
+            stroke-width: 1;
+        }
+
+        .chart-grid {
+            stroke: rgba(255, 255, 255, 0.15);
+            stroke-width: 1;
+            stroke-dasharray: 2,2;
+        }
+
+        .chart-data-line {
+            stroke-width: 2;
+            fill: none;
+            stroke-linejoin: round;
+            stroke-linecap: round;
+        }
+
+        .chart-data-area {
+            opacity: 0.3;
+        }
+
+        .chart-label {
+            fill: #fff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 12px;
+        }
+
+        .chart-tooltip {
+            position: absolute;
+            background: rgba(26, 26, 46, 0.95);
+            border: 1px solid #0093E9;
+            border-radius: 5px;
+            padding: 10px;
+            color: white;
+            font-size: 0.9rem;
+            pointer-events: none;
+            z-index: 100;
+            box-shadow: 0 5px 15px rgba(0, 147, 233, 0.3);
+            display: none;
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            justify-content: center;
+        }
+
+        .chart-control-btn {
+            background: rgba(0, 147, 233, 0.2);
+            border: 1px solid rgba(0, 147, 233, 0.5);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .chart-control-btn:hover {
+            background: rgba(0, 147, 233, 0.4);
+        }
+
+        .chart-control-btn.active {
+            background: #0093E9;
+            border-color: #0093E9;
+            font-weight: bold;
+        }
+
+        .risk-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .metric-card {
+            background: rgba(0, 147, 233, 0.1);
+            border: 1px solid rgba(0, 147, 233, 0.3);
+            border-radius: 5px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin: 0.5rem 0;
+            font-family: 'Orbitron', sans-serif;
+            color: #0093E9;
+        }
+
+        .risk-level {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9em;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            margin-top: 0.5rem;
+        }
+
+        .risk-low {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.5);
+        }
+
+        .risk-medium {
+            background: rgba(234, 179, 8, 0.2);
+            color: #eab308;
+            border: 1px solid rgba(234, 179, 8, 0.5);
+        }
+
+        .risk-high {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.5);
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            cursor: pointer;
+        }
+
+        .theme-toggle svg {
+            width: 24px;
+            height: 24px;
+            fill: #fff;
+        }
+
+        .dark-theme {
+            background-color: #1a1a2e;
+            color: #fff;
+        }
+
+        .light-theme {
+            background-color: #d2e5f7;
+            color: #333;
+        }
+
+        .light-theme .grid-background {
+            background: 
+                linear-gradient(90deg, rgba(210, 229, 247, 0.97) 21px, transparent 1%) center,
+                linear-gradient(rgba(210, 229, 247, 0.97) 21px, transparent 1%) center,
+                rgba(0, 147, 233, 0.2);
+        }
+
+        .light-theme .power-line {
+            background: rgba(0, 147, 233, 0.3);
+        }
+
+        .light-theme .power-pulse {
+            background: #0093E9;
+        }
+
+        .light-theme .container {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(0, 147, 233, 0.3);
+            box-shadow: 0 0 30px rgba(0, 147, 233, 0.2);
+        }
+
+        .light-theme .home-btn {
+            color: #0093E9;
+        }
+
+        .light-theme .home-btn:hover {
+            color: #fff;
+            text-shadow: 0 0 10px rgba(0, 147, 233, 0.7);
+        }
+
+        .light-theme .animated-heading h1 {
+            color: #333;
+        }
+
+        .light-theme .heading-underline {
+            background: linear-gradient(90deg, #0093E9, transparent);
+        }
+
+        .light-theme .form-grid {
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .light-theme .input-group label {
+            color: #0093E9;
+        }
+
+        .light-theme .input-group input {
+            background: rgba(0, 147, 233, 0.05);
+            border: 1px solid rgba(0, 147, 233, 0.3);
+            color: #000000;
+        }
+
+        .light-theme .input-group input::placeholder {
+            color: #64748b;
+        }
+
+        .light-theme .input-group input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            opacity: 0.8;
+        }
+
+        .light-theme .input-group input:focus {
+            outline: none;
+            border-color: #0093E9;
+            box-shadow: 0 0 0 2px rgba(0, 147, 233, 0.2);
+        }
+
+        .light-theme button[type="submit"] {
+            background: linear-gradient(135deg, #0093E9, #0066CC);
+            color: white;
+        }
+
+        .light-theme button[type="submit"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 147, 233, 0.4);
+        }
+
+        .light-theme .loading {
+            color: #0093E9;
+        }
+
+        .light-theme .prediction-card {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0, 147, 233, 0.3);
+            box-shadow: 0 5px 15px rgba(0, 147, 233, 0.1);
+        }
+
+        .light-theme .prediction-header {
+            background: linear-gradient(45deg, #0093E9, #0066CC);
+            color: white;
+        }
+
+        .light-theme .failure-status {
+            color: #333;
+        }
+
+        .light-theme .failure-yes {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #ef4444;
+        }
+
+        .light-theme .failure-no {
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.5);
+            color: #22c55e;
+        }
+
+        .light-theme .result-grid {
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .light-theme .result-item {
+            background: rgba(0, 147, 233, 0.1);
+            border: 1px solid rgba(0, 147, 233, 0.2);
+        }
+
+        .light-theme .result-item strong {
+            color: #0093E9;
+        }
+
+        .light-theme .confidence-bar {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .light-theme .chart-container {
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(0, 147, 233, 0.3);
+        }
+
+        .light-theme .chart-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .light-theme .chart-axis {
+            stroke: rgba(0, 0, 0, 0.3);
+            stroke-width: 1;
+        }
+
+        .light-theme .chart-grid {
+            stroke: rgba(0, 0, 0, 0.15);
+            stroke-width: 1;
+            stroke-dasharray: 2,2;
+        }
+
+        .light-theme .chart-data-line {
+            stroke-width: 2;
+            fill: none;
+            stroke-linejoin: round;
+            stroke-linecap: round;
+        }
+
+        .light-theme .chart-data-area {
+            opacity: 0.3;
+        }
+
+        .light-theme .chart-label {
+            fill: #333;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 12px;
+        }
+
+        .light-theme .chart-tooltip {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #0093E9;
+            border-radius: 5px;
+            padding: 10px;
+            color: #333;
+            font-size: 0.9rem;
+            pointer-events: none;
+            z-index: 100;
+            box-shadow: 0 5px 15px rgba(0, 147, 233, 0.3);
+            display: none;
+        }
+
+        .light-theme .chart-controls {
+            gap: 10px;
+            margin-bottom: 15px;
+            justify-content: center;
+        }
+
+        .light-theme .chart-control-btn {
+            background: rgba(0, 147, 233, 0.2);
+            border: 1px solid rgba(0, 147, 233, 0.5);
+            color: #333;
+            padding: 5px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .light-theme .chart-control-btn:hover {
+            background: rgba(0, 147, 233, 0.4);
+        }
+
+        .light-theme .chart-control-btn.active {
+            background: #0093E9;
+            border-color: #0093E9;
+            font-weight: bold;
+        }
+
+        .light-theme .risk-metrics {
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .light-theme .metric-card {
+            background: rgba(0, 147, 233, 0.1);
+            border: 1px solid rgba(0, 147, 233, 0.3);
+            border-radius: 5px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .light-theme .metric-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin: 0.5rem 0;
+            font-family: 'Orbitron', sans-serif;
+            color: #0093E9;
+        }
+
+        .light-theme .risk-level {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9em;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            margin-top: 0.5rem;
+        }
+
+        .light-theme .risk-low {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.5);
+        }
+
+        .light-theme .risk-medium {
+            background: rgba(234, 179, 8, 0.2);
+            color: #eab308;
+            border: 1px solid rgba(234, 179, 8, 0.5);
+        }
+
+        .light-theme .risk-high {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.5);
+        }
+
+        .prevention-section {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            border: 1px solid rgba(0, 147, 233, 0.3);
+        }
+
+        .prevention-section h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            color: #0093E9;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .prevention-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .prevention-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            gap: 1rem;
+            border: 1px solid rgba(0, 147, 233, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .prevention-item:hover {
+            background: rgba(0, 147, 233, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .prevention-icon {
+            font-size: 1.5rem;
+            color: #0093E9;
+            min-width: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .prevention-content h4 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+
+        .prevention-content ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .prevention-content ul li {
+            margin-bottom: 0.5rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            position: relative;
+            padding-left: 1.2rem;
+        }
+
+        .prevention-content ul li:before {
+            content: '•';
+            color: #0093E9;
+            position: absolute;
+            left: 0;
+        }
+
+        .light-theme .prevention-section {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(0, 147, 233, 0.3);
+        }
+
+        .light-theme .prevention-item {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 147, 233, 0.2);
+        }
+
+        .light-theme .prevention-item:hover {
+            background: rgba(0, 147, 233, 0.05);
+        }
+
+        .light-theme .prevention-content h4 {
+            color: #0093E9;
+        }
+
+        .light-theme .prevention-content ul li {
+            color: rgba(0, 0, 0, 0.8);
+        }
+
+        .light-theme .prevention-content ul li:before {
+            color: #0093E9;
+        }
+    </style>
+</head>
+<body>
+    <div class="theme-toggle" onclick="toggleTheme()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3.5c2.12 0 3.87 1.16 4.92 2.95l-1.45 1.08A7.955 7.955 0 0 1 12 6.5zm.02 10.05a8.01 8.01 0 0 1-4.93-1.07L5.08 15.37a7.96 7.96 0 0 1 10.84-7.42l1.41 1.41c-1.8 2.8-4.7 4.95-8.02 4.95z"/>
+        </svg>
+    </div>
+    <div class="grid-background"></div>
+    <div class="power-line">
+        <div class="power-pulse"></div>
+    </div>
+
+    <div class="container">
+        <a href="/" class="home-btn">← Home</a>
+        
+        <div class="animated-heading">
+            <h1>
+                <span class="heading-icon">⚡</span>
+                <div class="heading-text">GRID ANALYSIS</div>
+            </h1>
+            <div class="heading-underline"></div>
+        </div>
+        
+        <form id="predictionForm">
+            <div class="form-grid">
+                <div class="input-group">
+                    <label for="start_time">Start Time</label>
+                    <input type="datetime-local" id="start_time" name="start_time" required>
+                </div>
+                
+                <div class="input-group">
+                    <label for="end_time">End Time</label>
+                    <input type="datetime-local" id="end_time" name="end_time" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="area">Area (Delhi Location)</label>
+                    <input type="text" id="area" name="area" required placeholder="Enter Delhi location (e.g., Connaught Place, Nehru Place)">
+                </div>
+
+                <div class="input-group">
+                    <label for="power_plant">Power Plant</label>
+                    <input type="text" id="power_plant" name="power_plant" required placeholder="Enter power plant name">
+                </div>
+            </div>
+
+            <button type="submit">Grid Prediction</button>
+        </form>
+
+        <div class="loading">Analyzing grid data...</div>
+
+        <div id="result"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        function animateHeading() {
+            const text = "GRID ANALYSIS";
+            const headingText = document.querySelector('.heading-text');
+            headingText.innerHTML = '';
+
+            text.split('').forEach((char, index) => {
+                const span = document.createElement('span');
+                span.textContent = char === ' ' ? '\u00A0' : char;
+                span.style.animationDelay = `${index * 0.1}s`;
+                headingText.appendChild(span);
+            });
+        }
+
+        // SVG Chart Drawing Functions
+        function createRadarChart(container, data, isFailure) {
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const radius = Math.min(width, height) * 0.4;
+            const numPoints = data.labels.length;
+            
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute("class", "chart-svg");
+            svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+            
+            // Draw grid circles
+            for (let i = 1; i <= 5; i++) {
+                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circle.setAttribute("cx", centerX);
+                circle.setAttribute("cy", centerY);
+                circle.setAttribute("r", radius * (i / 5));
+                circle.setAttribute("class", "chart-grid");
+                circle.setAttribute("stroke", "rgba(255, 255, 255, 0.15)");
+                circle.setAttribute("fill", "none");
+                svg.appendChild(circle);
+            }
+            
+            // Draw axes
+            for (let i = 0; i < numPoints; i++) {
+                const angle = (i * 2 * Math.PI / numPoints) - Math.PI / 2;
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", centerX);
+                line.setAttribute("y1", centerY);
+                line.setAttribute("x2", centerX + radius * Math.cos(angle));
+                line.setAttribute("y2", centerY + radius * Math.sin(angle));
+                line.setAttribute("class", "chart-axis");
+                svg.appendChild(line);
+                
+                // Add labels
+                const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                label.setAttribute("x", centerX + (radius + 20) * Math.cos(angle));
+                label.setAttribute("y", centerY + (radius + 20) * Math.sin(angle));
+                label.setAttribute("text-anchor", "middle");
+                label.setAttribute("dominant-baseline", "middle");
+                label.setAttribute("class", "chart-label");
+                label.textContent = data.labels[i];
+                svg.appendChild(label);
+            }
+            
+            // Draw data polygon
+            const points = [];
+            for (let i = 0; i < numPoints; i++) {
+                const angle = (i * 2 * Math.PI / numPoints) - Math.PI / 2;
+                const valueRadius = radius * (data.datasets[0].data[i] / 100);
+                const x = centerX + valueRadius * Math.cos(angle);
+                const y = centerY + valueRadius * Math.sin(angle);
+                points.push(`${x},${y}`);
+            }
+            
+            const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+            polygon.setAttribute("points", points.join(" "));
+            polygon.setAttribute("class", "chart-data-area");
+            polygon.setAttribute("fill", isFailure ? "rgba(239, 68, 68, 0.2)" : "rgba(0, 147, 233, 0.2)");
+            svg.appendChild(polygon);
+            
+            const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+            polyline.setAttribute("points", points.join(" "));
+            polyline.setAttribute("class", "chart-data-line");
+            polyline.setAttribute("stroke", isFailure ? "#ef4444" : "#0093E9");
+            svg.appendChild(polyline);
+            
+            // Add data points
+            points.forEach(point => {
+                const [x, y] = point.split(",");
+                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circle.setAttribute("cx", x);
+                circle.setAttribute("cy", y);
+                circle.setAttribute("r", 4);
+                circle.setAttribute("fill", isFailure ? "#ef4444" : "#0093E9");
+                circle.setAttribute("stroke", "#fff");
+                circle.setAttribute("stroke-width", 2);
+                svg.appendChild(circle);
+            });
+            
+            container.innerHTML = '';
+            container.appendChild(svg);
+        }
+
+        function createBarChart(container, data, isFailure) {
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            const margin = { top: 20, right: 20, bottom: 40, left: 40 };
+            const chartWidth = width - margin.left - margin.right;
+            const chartHeight = height - margin.top - margin.bottom;
+            
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute("class", "chart-svg");
+            svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+            
+            const chartGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            chartGroup.setAttribute("transform", `translate(${margin.left},${margin.top})`);
+            svg.appendChild(chartGroup);
+            
+            // Draw grid lines
+            for (let i = 0; i <= 100; i += 20) {
+                const y = chartHeight - (i / 100 * chartHeight);
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", 0);
+                line.setAttribute("y1", y);
+                line.setAttribute("x2", chartWidth);
+                line.setAttribute("y2", y);
+                line.setAttribute("class", "chart-grid");
+                chartGroup.appendChild(line);
+                
+                const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                label.setAttribute("x", -5);
+                label.setAttribute("y", y);
+                label.setAttribute("text-anchor", "end");
+                label.setAttribute("dominant-baseline", "middle");
+                label.setAttribute("class", "chart-label");
+                label.textContent = i;
+                chartGroup.appendChild(label);
+            }
+            
+            // Draw bars
+            const barWidth = chartWidth / data.labels.length * 0.8;
+            const barSpacing = chartWidth / data.labels.length * 0.2;
+            
+            data.labels.forEach((label, i) => {
+                const barHeight = (data.datasets[0].data[i] / 100) * chartHeight;
+                const x = i * (barWidth + barSpacing);
+                const y = chartHeight - barHeight;
+                
+                const bar = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                bar.setAttribute("x", x);
+                bar.setAttribute("y", y);
+                bar.setAttribute("width", barWidth);
+                bar.setAttribute("height", barHeight);
+                bar.setAttribute("rx", 2);
+                bar.setAttribute("ry", 2);
+                bar.setAttribute("fill", isFailure ? 
+                    `rgba(239, 68, 68, ${0.3 + (i * 0.1)})` : 
+                    `rgba(0, 147, 233, ${0.3 + (i * 0.1)})`);
+                chartGroup.appendChild(bar);
+                
+                const labelText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                labelText.setAttribute("x", x + barWidth / 2);
+                labelText.setAttribute("y", chartHeight + 15);
+                labelText.setAttribute("text-anchor", "middle");
+                labelText.setAttribute("class", "chart-label");
+                labelText.textContent = label;
+                chartGroup.appendChild(labelText);
+            });
+            
+            container.innerHTML = '';
+            container.appendChild(svg);
+        }
+
+        function createPolarChart(container, data, isFailure) {
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const radius = Math.min(width, height) * 0.35;
+            
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute("class", "chart-svg");
+            svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+            
+            // Draw grid circles with better visibility
+            for (let i = 1; i <= 5; i++) {
+                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circle.setAttribute("cx", centerX);
+                circle.setAttribute("cy", centerY);
+                circle.setAttribute("r", radius * (i / 5));
+                circle.setAttribute("class", "chart-grid");
+                circle.setAttribute("stroke", "rgba(255, 255, 255, 0.2)");
+                circle.setAttribute("fill", "none");
+                svg.appendChild(circle);
+            }
+            
+            // Draw axes with better visibility
+            for (let i = 0; i < 8; i++) {
+                const angle = (i * Math.PI / 4);
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", centerX);
+                line.setAttribute("y1", centerY);
+                line.setAttribute("x2", centerX + radius * Math.cos(angle));
+                line.setAttribute("y2", centerY + radius * Math.sin(angle));
+                line.setAttribute("class", "chart-axis");
+                line.setAttribute("stroke", "rgba(255, 255, 255, 0.3)");
+                svg.appendChild(line);
+            }
+            
+            // Draw data sectors with better colors
+            const numSectors = data.labels.length;
+            const sectorAngle = (2 * Math.PI) / numSectors;
+            
+            data.labels.forEach((label, i) => {
+                const startAngle = i * sectorAngle - Math.PI / 2;
+                const endAngle = (i + 1) * sectorAngle - Math.PI / 2;
+                const valueRadius = radius * (data.datasets[0].data[i] / 100);
+                
+                // Create sector path
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                const x1 = centerX + valueRadius * Math.cos(startAngle);
+                const y1 = centerY + valueRadius * Math.sin(startAngle);
+                const x2 = centerX + valueRadius * Math.cos(endAngle);
+                const y2 = centerY + valueRadius * Math.sin(endAngle);
+                
+                const largeArcFlag = sectorAngle > Math.PI ? 1 : 0;
+                
+                const pathData = [
+                    `M ${centerX} ${centerY}`,
+                    `L ${x1} ${y1}`,
+                    `A ${valueRadius} ${valueRadius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+                    "Z"
+                ].join(" ");
+                
+                path.setAttribute("d", pathData);
+                path.setAttribute("fill", isFailure ? 
+                    `rgba(239, 68, 68, ${0.3 + (i * 0.1)})` : 
+                    `rgba(0, 147, 233, ${0.3 + (i * 0.1)})`);
+                path.setAttribute("stroke", isFailure ? "#ef4444" : "#0093E9");
+                path.setAttribute("stroke-width", 1);
+                svg.appendChild(path);
+                
+                // Add label with better positioning
+                const midAngle = startAngle + sectorAngle / 2;
+                const labelRadius = radius + 25;
+                const labelX = centerX + labelRadius * Math.cos(midAngle);
+                const labelY = centerY + labelRadius * Math.sin(midAngle);
+                
+                const labelText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                labelText.setAttribute("x", labelX);
+                labelText.setAttribute("y", labelY);
+                labelText.setAttribute("text-anchor", "middle");
+                labelText.setAttribute("dominant-baseline", "middle");
+                labelText.setAttribute("class", "chart-label");
+                labelText.setAttribute("fill", "#fff");
+                labelText.textContent = label;
+                svg.appendChild(labelText);
+            });
+            
+            container.innerHTML = '';
+            container.appendChild(svg);
+        }
+
+        // Function to toggle theme
+        function toggleTheme() {
+            const body = document.body;
+            const isDark = body.classList.contains('dark-theme');
+            
+            // Toggle theme classes
+            body.classList.toggle('dark-theme');
+            body.classList.toggle('light-theme');
+            
+            // Store theme preference in localStorage
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+            
+            // Notify index page of theme change
+            window.parent.postMessage({
+                type: 'themeChange',
+                theme: isDark ? 'light' : 'dark'
+            }, '*');
+        }
+
+        // Apply saved theme preference
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.body.classList.add(savedTheme === 'dark' ? 'dark-theme' : 'light-theme');
+        });
+
+        // Add message listener for theme change from index page
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'themeChange') {
+                toggleTheme();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            animateHeading();
+        });
+
+        document.getElementById('predictionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const loading = document.querySelector('.loading');
+            const resultDiv = document.getElementById('result');
+            
+            loading.style.display = 'block';
+            resultDiv.innerHTML = '';
+
+            const formData = {
+                start_time: document.getElementById('start_time').value,
+                end_time: document.getElementById('end_time').value,
+                area: document.getElementById('area').value,
+                power_plant: document.getElementById('power_plant').value
+            };
+
+            try {
+                // Simulate API call
+                setTimeout(() => {
+                    loading.style.display = 'none';
+                    
+                    // Mock data
+                    const mockData = {
+                        is_grid_failure: Math.random() > 0.5,
+                        confidence: Math.random(),
+                        reason: ['equipment failure', 'weather rainstorm', 'overload', 'animal intervention'][Math.floor(Math.random() * 4)]
+                    };
+                    
+                    const confidencePercent = (mockData.confidence * 100).toFixed(1);
+                    const isFailure = mockData.is_grid_failure;
+                    const failureText = isFailure ? "YES - Grid Failure Detected" : "NO - Normal Operation";
+                    const icon = isFailure ? '⚠️' : '✅';
+
+                    // Generate result HTML
+                    resultDiv.innerHTML = `
+                        <div class="prediction-card">
+                            <div class="prediction-header">
+                                Prediction Results
+                            </div>
+                            <div class="prediction-content">
+                                <div class="failure-status ${isFailure ? 'failure-yes' : 'failure-no'}">
+                                    ${icon} Grid Failure: ${failureText}
+                                </div>
+                                
+                                <div class="result-grid">
+                                    <div class="result-item">
+                                        <strong>Predicted Event:</strong>
+                                        <p>${mockData.reason}</p>
+                                    </div>
+                                    
+                                    <div class="result-item">
+                                        <strong>Confidence:</strong>
+                                        <p>${confidencePercent}%</p>
+                                        <div class="confidence-bar">
+                                            <div class="confidence-level" 
+                                                 style="width: ${confidencePercent}%; 
+                                                        background: ${isFailure ? 
+                                                            'linear-gradient(90deg, #dc2626, #ef4444)' : 
+                                                            'linear-gradient(90deg, #16a34a, #22c55e)'};">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="result-item">
+                                        <strong>Analysis Period:</strong>
+                                        <p>Start: ${new Date(formData.start_time).toLocaleString()}</p>
+                                        <p>End: ${new Date(formData.end_time).toLocaleString()}</p>
+                                    </div>
+                                    
+                                    <div class="result-item">
+                                        <strong>Location:</strong>
+                                        <p>${formData.area} - ${formData.power_plant}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="prediction-card">
+                            <div class="prediction-header">
+                                <span>📊 Risk Analysis</span>
+                            </div>
+                            <div class="prediction-content">
+                                <div class="chart-controls">
+                                    <button class="chart-control-btn active" data-chart="radar">Radar View</button>
+                                    <button class="chart-control-btn" data-chart="bar">Bar View</button>
+                                    <button class="chart-control-btn" data-chart="polar">Polar View</button>
+                                </div>
+                                
+                                <div class="chart-container">
+                                    <div id="riskChart"></div>
+                                </div>
+
+                                <div class="risk-metrics">
+                                    <div class="metric-card" data-metric="riskScore">
+                                        <div>Overall Risk Score</div>
+                                        <div class="metric-value">${Math.floor(Math.random() * 100)}%</div>
+                                        <div class="risk-level risk-${['low', 'medium', 'high'][Math.floor(Math.random() * 3)]}">
+                                            ${['Low', 'Medium', 'High'][Math.floor(Math.random() * 3)]} Risk
+                                        </div>
+                                    </div>
+                                    <div class="metric-card" data-metric="impactScore">
+                                        <div>Impact Score</div>
+                                        <div class="metric-value">${Math.floor(Math.random() * 100)}%</div>
+                                    </div>
+                                    <div class="metric-card" data-metric="probabilityScore">
+                                        <div>Probability Score</div>
+                                        <div class="metric-value">${Math.floor(Math.random() * 100)}%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="prediction-card">
+                            <div class="prediction-header">
+                                <span>🗺️ Map View</span>
+                            </div>
+                            <div class="prediction-content">
+                                <div id="map" style="height: 400px; width: 100%;"></div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Chart data
+                    const chartData = {
+                        labels: ['Risk Score', 'Impact', 'Probability', 'Confidence', 'Severity'],
+                        datasets: [{
+                            data: [
+                                Math.random() * 100,
+                                Math.random() * 100,
+                                Math.random() * 100,
+                                mockData.confidence * 100,
+                                mockData.is_grid_failure ? 80 : 40
+                            ]
+                        }]
+                    };
+
+                    // Get chart container
+                    const chartContainer = document.getElementById('riskChart');
+                    
+                    // Initial chart
+                    createRadarChart(chartContainer, chartData, mockData.is_grid_failure);
+                    
+                    // Add chart switching
+                    document.querySelectorAll('.chart-control-btn').forEach(button => {
+                        button.addEventListener('click', function() {
+                            document.querySelectorAll('.chart-control-btn').forEach(btn => {
+                                btn.classList.remove('active');
+                            });
+                            this.classList.add('active');
+                            
+                            const chartType = this.getAttribute('data-chart');
+                            
+                            switch(chartType) {
+                                case 'bar':
+                                    createBarChart(chartContainer, chartData, mockData.is_grid_failure);
+                                    break;
+                                case 'polar':
+                                    createPolarChart(chartContainer, chartData, mockData.is_grid_failure);
+                                    break;
+                                default:
+                                    createRadarChart(chartContainer, chartData, mockData.is_grid_failure);
+                            }
+                        });
+                    });
+                    
+                    // Map View
+                    const mapContainer = document.getElementById('map');
+                    const map = L.map(mapContainer).setView([28.6139, 77.2090], 11);
+                    let currentMarker = null;
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
+                        subdomains: ['a', 'b', 'c']
+                    }).addTo(map);
+                    
+                    // Determine color based on confidence
+                    let color = 'green';
+                    if (mockData.confidence >= 0.3 && mockData.confidence < 0.5) {
+                        color = 'yellow';
+                    } else if (mockData.confidence >= 0.5 && mockData.confidence < 0.75) {
+                        color = 'orange';
+                    } else if (mockData.confidence >= 0.75) {
+                        color = 'red';
+                    }
+                    
+                    // Add polygon overlay
+                    const bounds = [
+                        [28.6139 - 0.05, 77.2090 - 0.05],
+                        [28.6139 + 0.05, 77.2090 - 0.05],
+                        [28.6139 + 0.05, 77.2090 + 0.05],
+                        [28.6139 - 0.05, 77.2090 + 0.05]
+                    ];
+                    
+                    L.polygon(bounds, {
+                        color: color,
+                        fillColor: color,
+                        fillOpacity: 0.35
+                    }).addTo(map);
+                    
+                    // Add marker at center
+                    // Initial marker removed to allow dynamic placement
+                }, 1500);
+                
+            } catch (error) {
+                loading.style.display = 'none';
+                resultDiv.innerHTML = `
+                    <div class="prediction-card">
+                        <div class="prediction-header" style="background: linear-gradient(45deg, #dc2626, #ef4444);">
+                            Error
+                        </div>
+                        <div class="prediction-content">
+                            <p style="color: #dc2626; padding: 20px;">❌ Failed to get prediction. Please try again.</p>
+                            <p style="font-size: 0.9em; color: #666; margin: 0 20px 20px; padding-bottom: 20px;">
+                                Technical details: ${error.message}
+                            </p>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+
+        // Helper functions
+        function getSuggestions(reason) {
+            const suggestions = {
+                'equipment failure': [
+                    "Schedule regular equipment maintenance checks",
+                    "Implement predictive maintenance using IoT sensors",
+                    "Keep critical spare parts in inventory",
+                    "Update old or deteriorating equipment",
+                    "Conduct regular thermal imaging inspections"
+                ],
+                'weather rainstorm': [
+                    "Install weather-resistant equipment covers",
+                    "Improve drainage systems around electrical equipment",
+                    "Implement lightning protection systems",
+                    "Conduct regular tree trimming near power lines",
+                    "Install flood barriers around critical equipment"
+                ],
+                'overload': [
+                    "Monitor load distribution regularly",
+                    "Implement load balancing systems",
+                    "Install capacity warning systems",
+                    "Upgrade transmission lines in high-load areas",
+                    "Develop peak load management strategies"
+                ],
+                'animal intervention': [
+                    "Install animal guards on transformers",
+                    "Use insulated covering on exposed conductors",
+                    "Install ultrasonic animal deterrents",
+                    "Create physical barriers around substations",
+                    "Regular inspection of animal protection equipment"
+                ]
+            };
+
+            return suggestions[reason.toLowerCase()] || [
+                "Implement regular maintenance schedules",
+                "Conduct staff training on emergency procedures",
+                "Maintain updated emergency response plans",
+                "Install monitoring systems",
+                "Regular safety audits"
+            ];
+        }
+    </script>
+</body>
+</html>

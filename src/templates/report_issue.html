@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Power Grid Issue</title>
+    <link href="/static/css/custom.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #3a86ff;
+            --secondary-color: #8338ec;
+            --dark-bg: #0d1b2a;
+            --card-bg: #1b263b;
+            --text-light: #ffffff;
+        }
+
+        body {
+            background: var(--dark-bg);
+            color: var(--text-light);
+            font-family: 'Roboto', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .report-container {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .form-title {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 2rem;
+            font-size: 2rem;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-light);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: var(--text-light);
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 1rem;
+            background: var(--primary-color);
+            color: var(--text-light);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.2s ease;
+            font-weight: bold;
+        }
+
+        .submit-btn:hover {
+            background: var(--secondary-color);
+            transform: translateY(-3px);
+        }
+
+        .status-message {
+            text-align: center;
+            margin-top: 1rem;
+            padding: 0.5rem;
+            border-radius: 8px;
+        }
+
+        .status-success {
+            background: rgba(6, 214, 160, 0.2);
+            color: #06d6a0;
+        }
+
+        .status-error {
+            background: rgba(239, 71, 111, 0.2);
+            color: #ef476f;
+        }
+    </style>
+</head>
+<body>
+    <div class="report-container">
+        <h2 class="form-title">Report Power Grid Issue</h2>
+        <form id="issueReportForm" action="/submit_issue" method="POST">
+            <div class="form-group">
+                <label for="start_time" class="form-label">Start Time</label>
+                <input type="datetime-local" id="start_time" name="start_time" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label for="end_time" class="form-label">End Time</label>
+                <input type="datetime-local" id="end_time" name="end_time" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label for="area" class="form-label">Affected Area</label>
+                <input type="text" id="area" name="area" class="form-input" required placeholder="Enter affected area">
+            </div>
+            <div class="form-group">
+                <label for="power_plant" class="form-label">Power Plant</label>
+                <input type="text" id="power_plant" name="power_plant" class="form-input" required placeholder="Enter power plant name">
+            </div>
+            <div class="form-group">
+                <label for="reason" class="form-label">Reason for Failure</label>
+                <textarea id="reason" name="reason" class="form-input" rows="4" required placeholder="Describe the reason for the power grid issue"></textarea>
+            </div>
+            <button type="submit" class="submit-btn">Submit Issue Report</button>
+            <div id="statusMessage" class="status-message"></div>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('issueReportForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const statusMessage = document.getElementById('statusMessage');
+            
+            // Disable submit button during submission
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+            
+            fetch('/submit_issue', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                // Check if response is OK
+                if (!response.ok) {
+                    // Try to parse error response
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                    }).catch(() => {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Issue Report';
+                
+                if (data.status === 'success') {
+                    // Simple success message
+                    statusMessage.textContent = 'Issue reported successfully!';
+                    statusMessage.className = 'status-message status-success';
+                    this.reset();
+                } else {
+                    // Error handling
+                    statusMessage.textContent = 'Error: ' + (data.message || 'Unknown error occurred');
+                    statusMessage.className = 'status-message status-error';
+                }
+            })
+            .catch(error => {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Issue Report';
+                
+                // Detailed error logging
+                console.error('Submission Error:', error);
+                statusMessage.textContent = `Submission error: ${error.message}`;
+                statusMessage.className = 'status-message status-error';
+            });
+        });
+    </script>
+</body>
+</html>

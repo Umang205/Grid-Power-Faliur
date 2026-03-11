@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power Grid Analysis System</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <style>
+        /* Custom CSS for visibility */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #000; /* Fallback background color */
+            color: #ffffff; /* Light text for better contrast */
+        }
+        body {
+            background-image: url('{{ url_for('static', filename='Screenshot 2025-04-16 145126.png') }}');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+        .glow-text {
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.5); /* Soft blue glow */
+        }
+        .glow-button {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        }
+        .feature-card, .stat-card {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        .animate-gradient {
+            background: linear-gradient(90deg, #ebf8ff, #bee3f8, #ebf8ff);
+            background-size: 200% 200%;
+        }
+    </style>
+</head>
+<body class="overflow-x-hidden">
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="fixed inset-0 bg-white flex items-center justify-center z-50">
+        <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-[#4CAF50] border-t-2 border-[#3b82f6]"></div>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="min-h-screen flex flex-col items-center justify-center relative overflow-hidden">
+        <div class="absolute inset-0 bg-black bg-opacity-60"></div>
+        <div class="relative z-10 text-center">
+            <h1 class="text-6xl md:text-8xl font-bold mb-6 glow-text tracking-wide text-[#1e3a8a]">
+                Power Grid Analysis System
+            </h1>
+            <p class="text-2xl md:text-3xl text-[#3b82f6] mb-8">
+                Advanced AI-powered grid failure prediction
+            </p>
+            <div class="flex space-x-4">
+                <a href="/analysis" class="px-8 py-4 rounded-full text-lg font-semibold bg-gradient-to-r from-[#3b82f6] to-[#1d4ed8] 
+                    text-white hover:scale-105 transition-all duration-300 glow-button">
+                    Get Started
+                </a>
+                <a href="#features" class="px-8 py-4 rounded-full text-lg font-semibold border-2 border-[#3b82f6] 
+                    text-[#3b82f6] hover:bg-[#3b82f6]/10 transition-all duration-300">
+                    Learn More
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-20 bg-[#f0f4f8]">
+        <div class="container mx-auto px-4">
+            <h2 class="text-4xl font-bold text-center mb-12 text-[#1e3a8a]" data-aos="fade-up">
+                Key Features
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="feature-card p-6 rounded-lg" data-aos="fade-up" data-aos-delay="100">
+                    <div class="icon-container mb-4">
+                        <i class="fas fa-lightbulb fa-3x text-[#3b82f6] animate-pulse"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-[#1e3a8a] mb-2">
+                        Real-time Monitoring
+                    </h3>
+                    <p class="text-gray-600">
+                        Continuous tracking of grid health metrics
+                    </p>
+                </div>
+                <div class="feature-card p-6 rounded-lg" data-aos="fade-up" data-aos-delay="200">
+                    <div class="icon-container mb-4">
+                        <i class="fas fa-chart-line fa-3x text-[#3b82f6] animate-pulse"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-[#1e3a8a] mb-2">
+                        Predictive Analytics
+                    </h3>
+                    <p class="text-gray-600">
+                        AI-driven failure probability forecasts
+                    </p>
+                </div>
+                <div class="feature-card p-6 rounded-lg" data-aos="fade-up" data-aos-delay="300">
+                    <div class="icon-container mb-4">
+                        <i class="fas fa-shield-alt fa-3x text-[#3b82f6] animate-pulse"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-[#1e3a8a] mb-2">
+                        Preventive Measures
+                    </h3>
+                    <p class="text-gray-600">
+                        Automated risk mitigation protocols
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="py-20 bg-[#e6f0fa]">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div class="stat-card p-6 rounded-lg" data-aos="fade-up" data-aos-delay="100">
+                    <h3 class="text-4xl font-bold text-[#1d4ed8]">99.9%</h3>
+                    <p class="text-gray-600">Accuracy</p>
+                </div>
+                <div class="stat-card p-6 rounded-lg" data-aos="fade-up" data-aos-delay="200">
+                    <h3 class="text-4xl font-bold text-[#1d4ed8]">24/7</h3>
+                    <p class="text-gray-600">Monitoring</p>
+                </div>
+                <div class="stat-card p-6 rounded-lg" data-aos="fade-up" data-aos-delay="300">
+                    <h3 class="text-4xl font-bold text-[#1d4ed8]">100+</h3>
+                    <p class="text-gray-600">Parameters</p>
+                </div>
+                <div class="stat-card p-6 rounded-lg" data-aos="fade-up" data-aos-delay="400">
+                    <h3 class="text-4xl font-bold text-[#1d4ed8]">AI</h3>
+                    <p class="text-gray-600">Powered</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-8 bg-[#1e3a8a] text-white">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <p class="text-gray-300">&copy; 2025 Power Grid Analysis System</p>
+                <div class="mt-4 md:mt-0">
+                    <h4 class="text-xl font-semibold mb-4">Follow Us</h4>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-white hover:text-[#93c5fd] transition-colors">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" class="text-white hover:text-[#93c5fd] transition-colors">
+                            <i class="fab fa-linkedin"></i>
+                        </a>
+                        <a href="#" class="text-white hover:text-[#93c5fd] transition-colors">
+                            <i class="fab fa-github"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        AOS.init({ duration: 800, once: true });
+        window.addEventListener('load', () => {
+            document.getElementById('loading-screen').style.display = 'none';
+        });
+    </script>
+</body>
+</html>

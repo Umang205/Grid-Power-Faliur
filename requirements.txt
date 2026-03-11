@@ -1,0 +1,9 @@
+flask
+flask-socketio
+scikit-learn
+pandas
+numpy
+joblib
+openpyxl
+python-dotenv
+twilio

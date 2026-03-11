@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+# .env  # Commented out to allow .env file
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Configuration
+# config.py  # Commented out to allow config.py
+
+# Google Maps API Key
+google_maps_api_key.txt
+.env 

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grid Analysis Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/css/analysis.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        /* Grid Analysis Dashboard Styles */
+        body {
+            background-color: #f0f4f8;
+            color: #2d3748;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .panel {
+            background-color: white;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .chart-container {
+            background-color: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            height: 300px;
+        }
+        
+        /* Enhanced Heading Animation */
+        .form-title {
+            color: #1e3a8a;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .form-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+            transform: translateX(-50%);
+            animation: underlineExpand 1s ease-out forwards;
+        }
+        
+        @keyframes underlineExpand {
+            0% { width: 0; }
+            100% { width: 100%; }
+        }
+        
+        /* Enhanced Input Fields */
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            border: 2px solid rgba(59, 130, 246, 0.2);
+            background-color: white;
+            color: #2d3748;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+            transform: translateY(-1px);
+        }
+        
+        .form-control::placeholder {
+            color: #94a3b8;
+            transition: color 0.3s ease;
+        }
+        
+        .form-control:focus::placeholder {
+            color: #3b82f6;
+        }
+        
+        /* Enhanced Button with Pulsing Effect */
+        .btn-primary {
+            background: linear-gradient(to right, #3b82f6, #1d4ed8);
+            color: white;
+            padding: 0.875rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0;
+        }
+        
+        .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(29, 78, 216, 0.2);
+        }
+        
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-primary:active::before {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(2);
+            animation: pulse 0.6s ease-out;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(2);
+                opacity: 0;
+            }
+        }
+        
+        /* Loading Animation */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 50px;
+        }
+        
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #3b82f6;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Select Box Enhancement */
+        select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            border: 2px solid rgba(59, 130, 246, 0.2);
+            background-color: white;
+            color: #2d3748;
+            transition: all 0.3s ease;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'%3E%3Cpath fill='%233b82f6' d='M12 15l-4.243-4.243a1 1 0 011.414-1.414L12 12.586l4.243-4.243a1 1 0 011.414 1.414L13.414 15z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1.25rem;
+        }
+        
+        select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+        }
+        
+        /* Grid prediction form specific styles */
+        .grid-prediction-form {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        
+        @media (max-width: 640px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Utility Classes */
+        .text-accent {
+            color: #1d4ed8;
+        }
+        
+        .border-accent {
+            border-color: #3b82f6;
+        }
+        
+        .form-label {
+            display: block;
+            color: #3b82f6;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto px-4 py-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Real-Time Load Fluctuation Graph -->
+            <div class="panel rounded-lg p-6">
+                <h2 class="text-2xl font-bold mb-4 text-[#1e3a8a]">Real-Time Load Fluctuation</h2>
+                <div class="chart-container rounded-lg p-4">
+                    <canvas id="loadChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Regional Grid Stress Heat Map -->
+            <div class="panel rounded-lg p-6">
+                <h2 class="text-2xl font-bold mb-4 text-[#1e3a8a]">Regional Grid Stress</h2>
+                <div class="chart-container rounded-lg p-4" id="heatmap">
+                    <!-- Heatmap will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Risk Indicator -->
+            <div class="panel rounded-lg p-6">
+                <h2 class="text-2xl font-bold mb-4 text-[#1e3a8a]">Overall Risk Level</h2>
+                <div class="chart-container rounded-lg p-4" id="riskGauge">
+                    <!-- Risk gauge will be rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis Controls -->
+        <div class="mt-8 panel rounded-lg p-6">
+            <h2 class="text-2xl font-bold mb-6 text-[#1e3a8a]">Analysis Controls</h2>
+            <form class="space-y-4">
+                <div>
+                    <label class="block text-[#3b82f6] mb-2">Region</label>
+                    <select class="w-full p-2 rounded bg-white border border-[#3b82f6]/50 text-gray-800 focus:outline-none focus:border-[#3b82f6]">
+                        <option>North</option>
+                        <option>South</option>
+                        <option>East</option>
+                        <option>West</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[#3b82f6] mb-2">Load Level</label>
+                    <input type="number" class="w-full p-2 rounded bg-white border border-[#3b82f6]/50 text-gray-800 focus:outline-none focus:border-[#3b82f6]" placeholder="Enter load percentage">
+                </div>
+                <button type="submit" class="w-full py-3 btn-primary rounded text-white font-semibold transition-all">
+                    Analyze Now
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/analysis.js"></script>
+</body>
+</html>

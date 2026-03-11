@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grid Analysis Plots</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Root variables for consistent scaling */
+        :root {
+            --spacing-unit: clamp(0.5rem, 1vw, 1rem);
+            --container-padding: clamp(1rem, 3vw, 3rem);
+            --heading-size: clamp(1.5rem, 4vw, 3rem);
+            --text-size: clamp(0.875rem, 2vw, 1rem);
+            --card-padding: clamp(1rem, 2vw, 2rem);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #1a1a2e;
+            color: #fff;
+            font-family: 'Roboto', sans-serif;
+            position: relative;
+            overflow-x: hidden;
+            font-size: var(--text-size);
+            line-height: 1.5;
+        }
+
+        .grid-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(90deg, rgba(26,26,46,.97) 21px, transparent 1%) center,
+                linear-gradient(rgba(26,26,46,.97) 21px, transparent 1%) center,
+                rgba(0, 147, 233, 0.2);
+            background-size: 22px 22px;
+            animation: gridMove 30s linear infinite;
+            z-index: -1;
+        }
+
+        @keyframes gridMove {
+            0% { background-position: 0 0; }
+            100% { background-position: 44px 44px; }
+        }
+
+        .container {
+            position: relative;
+            width: min(100% - 2rem, 1200px);
+            margin-inline: auto;
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: var(--container-padding);
+            border: 1px solid rgba(0, 147, 233, 0.3);
+            box-shadow: 0 0 30px rgba(0, 147, 233, 0.2);
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .plot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .plot-item {
+            background: rgba(0, 147, 233, 0.1);
+            border: 1px solid rgba(0, 147, 233, 0.3);
+            border-radius: 10px;
+            padding: 1rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .plot-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 147, 233, 0.2);
+        }
+
+        .plot-image {
+            max-height: 300px;
+            object-fit: contain;
+            width: 100%;
+            border-radius: 5px;
+        }
+
+        .plot-title {
+            color: #0093E9;
+            font-family: 'Orbitron', sans-serif;
+            text-align: center;
+            margin-top: 0.75rem;
+            font-weight: 500;
+        }
+
+        .home-btn {
+            display: inline-block;
+            margin-top: 2rem;
+            color: #0093E9;
+            text-decoration: none;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 500;
+            padding: 0.75rem 1.5rem;
+            border: 1px solid rgba(0, 147, 233, 0.3);
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .home-btn:hover {
+            background: rgba(0, 147, 233, 0.1);
+            border-color: #0093E9;
+        }
+
+        .page-title {
+            font-family: 'Orbitron', sans-serif;
+            color: #0093E9;
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: var(--heading-size);
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-background"></div>
+    <div class="container">
+        <h1 class="page-title">Grid Analysis Plots</h1>
+        
+        {% if plot_files %}
+            <div class="plot-grid">
+                {% for plot in plot_files %}
+                    <div class="plot-item">
+                        <img src="{{ url_for('serve_plot', filename=plot) }}" 
+                             alt="{{ plot }}" 
+                             class="plot-image">
+                        <p class="plot-title">
+                            {{ plot.replace('_', ' ').replace('.png', '').title() }}
+                        </p>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="plot-item">
+                <p class="plot-title">No plots found in the gallery.</p>
+            </div>
+        {% endif %}
+        
+        <div class="text-center">
+            <a href="/" class="home-btn">
+                Back to Home
+            </a>
+        </div>
+    </div>
+</body>
+</html>
